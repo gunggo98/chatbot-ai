@@ -60,7 +60,7 @@ app.post('/api/chat', async (req: Request, res: Response): Promise<void> => {
 
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash', // DIUBAH KE MODEL TERBARU 2026 YANG AKTIF
+        model: 'gemini-2.5-flash', // DIUBAH KE MODEL TERBARU 2026 YANG AKTIF
         contents: [
           {
             role: 'user',
