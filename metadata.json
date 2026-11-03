@@ -1,0 +1,6 @@
+{
+  "name": "Agung AI - Cyber Companion",
+  "description": "Chatbot AI futuristik yang merepresentasikan Agung: mahasiswa UNPAM semester 1, calon programmer asal Sumedang, gamer & penikmat musik santai.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
