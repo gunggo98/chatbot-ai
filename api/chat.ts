@@ -91,10 +91,11 @@ app.post('/api/chat', async (req: Request, res: Response): Promise<void> => {
           replyText = response.text.trim();
           break;
         }
-      } catch (modelErr) {
-        console.warn(`Model ${modelName} error, mencoba fallback...`);
+      } catch (modelErr: any) {
+        console.warn(`Model ${modelName} error: ${modelErr?.message || modelErr}`);
       }
     }
+
 
     if (replyText) {
       res.json({ reply: replyText });
