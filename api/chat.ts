@@ -65,36 +65,39 @@ app.post('/api/chat', async (req: Request, res: Response): Promise<void> => {
         }))
       : [];
 
-    const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+    const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
     let replyText = '';
+    let lastError = '';
 
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash', // Model andalan, super cepat dan kuota stabil
-        contents: [
-          ...formattedHistory,
-          {
-            role: 'user',
-            parts: [{ text: message }],
-          },
-        ],
-        config: {
-          systemInstruction: AGUNG_PERSONALITY_PROMPT,
-        },
-      });
+    for (const model of modelsToTry) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: [
+            ...formattedHistory,
+            { role: 'user', parts: [{ text: message }] },
+          ],
+          config: { systemInstruction: AGUNG_PERSONALITY_PROMPT },
+        });
 
-      if (response.text && response.text.trim().length > 0) {
-        replyText = response.text.trim();
+        if (response.text && response.text.trim().length > 0) {
+          replyText = response.text.trim();
+          break;
+        }
+        lastError = `[${model}] respons kosong`;
+      } catch (modelErr: any) {
+        lastError = `[${model}] ${modelErr?.status ?? ''} ${modelErr?.message || modelErr}`;
+        console.error('[Gemini Engine Error]:', lastError);
       }
-    } catch (modelErr: any) {
-      console.error("[Gemini Engine Error]:", modelErr?.message || modelErr);
     }
-
 
     if (replyText) {
       res.json({ reply: replyText });
     } else {
-      res.json({ reply: "Halo bro! Gw Agung. Sorri banget tadi kuota API Gemini gw lagi limit atau down. Coba kirim pesan lagi beberapa saat lagi ya!" });
+      // DEBUG SEMENTARA: tampilkan error asli. Hapus bagian "Detail" setelah masalah ketemu.
+      res.json({
+        reply: `Halo bro! Gw Agung. Sorri banget, Gemini lagi bermasalah.\n\nDetail: ${lastError.slice(0, 300)}`,
+      });
     }
   } catch (err) {
     console.error('Chat error:', err);
