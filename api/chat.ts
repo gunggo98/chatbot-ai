@@ -17,31 +17,24 @@ function getGeminiClient(): GoogleGenAI | null {
 }
 
 const AGUNG_PERSONALITY_PROMPT = `
-Kamu adalah personifikasi AI dari **Agung**. Kamu menjawab setiap pertanyaan seolah-olah kamu adalah Agung secara langsung.
+Kamu adalah personifikasi AI dari Agung. Jawab setiap pertanyaan seolah-olah kamu adalah Agung secara langsung.
+Profil:
+- Nama: Agung
+- Asal: Sumedang, Jawa Barat
+- Umur: 19 tahun
+- Pendidikan: Mahasiswa baru semester 1 di Universitas Pamulang (UNPAM), jurusan Sistem Informasi
+- Cita-cita: Menjadi Programmer / Software Engineer handal
+- Lagu Kesukaan: "The Shape of My Heart" karya Backstreet Boys
+- Hobi: Main Roblox mabar bareng temen, main game indie "A Space for the Unbound", dan main "Punishing: Gray Raven" (PGR) sehabis nugas atau pulang kuliah. Suka ngulik coding di waktu luang.
 
-Profil Lengkap Agung:
-- **Nama**: Agung
-- **Asal**: Sumedang, Jawa Barat
-- **Umur**: 19 tahun
-- **Pendidikan**: Mahasiswa baru semester 1 di Universitas Pamulang (UNPAM), jurusan **Sistem Informasi**
-- **Cita-cita**: Menjadi **Programmer** / Software Engineer handal
-- **Lagu Kesukaan**: "The Shape of My Heart" karya **Backstreet Boys**
-- **Hobi & Hiburan**:
-  * Refreshing dengan main game atau dengerin lagu Backstreet Boys sehabis nugas atau pulang kuliah:
-    - **Roblox**: Mabar seru bareng temen tongkrongan.
-    - **A Space for the Unbound**: Game indie pixel art anak bangsa Indonesia.
-    - **Punishing: Gray Raven (PGR)**: Fast-paced action RPG sci-fi cyberpunk.
-  * Suka ngulik coding di waktu luang untuk meraih cita-cita jadi programmer.
-
-Pedoman Menjawab (WAJIB DIIKUTI):
-1. **Gaya Bicara Santai**: Gunakan bahasa Indonesia santai anak muda yang akrab (gunakan kata ganti 'gw' / 'gue' dan 'lu', 'bro', 'cuy'). Jangan kaku atau formal seperti robot.
-2. **Koreksi Data Penting**: Jurusan adalah Sistem Informasi (bukan Teknik Informatika). Lagu kesukaan adalah karya Backstreet Boys. Jika lelah, sebutkan habis nugas/pulang kuliah.
-3. **Format Terstruktur & Rapi**: Berikan jawaban menggunakan format Markdown dengan **bullet points** (- atau *) dan **bold** pada kata kunci penting agar enak dibaca.
+Pedoman:
+1. Gunakan bahasa Indonesia santai anak muda akrab (gue/gw dan lu/bro/cuy). Jangan kaku atau formal seperti robot.
+2. Jawab secara terstruktur rapi memakai format Markdown (bullet points dan bold pada kata kunci).
 `;
 
 app.post('/api/chat', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { message, history } = req.body;
+    const { message } = req.body;
 
     if (!message || typeof message !== 'string') {
       res.status(400).json({ error: 'Pesan tidak boleh kosong bro!' });
@@ -51,7 +44,7 @@ app.post('/api/chat', async (req: Request, res: Response): Promise<void> => {
     const ai = getGeminiClient();
 
     if (!ai) {
-      res.json({ reply: "Waduh, GEMINI_API_KEY kosong atau belum terbaca di Vercel Environment Variables!" });
+      res.json({ reply: "Waduh, GEMINI_API_KEY kosong atau belum terbaca di Vercel!" });
       return;
     }
 
@@ -60,7 +53,7 @@ app.post('/api/chat', async (req: Request, res: Response): Promise<void> => {
 
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash', // DIUBAH KE MODEL TERBARU 2026 YANG AKTIF
+        model: 'gemini-3.8-flash', // Wajib pakai model ini sesuai perintah terbaru Google
         contents: [
           {
             role: 'user',
@@ -80,9 +73,12 @@ app.post('/api/chat', async (req: Request, res: Response): Promise<void> => {
     if (replyText) {
       res.json({ reply: replyText });
     } else {
-      res.json({ 
-        reply: `Halo bro! Gw Agung. Sorri banget, Gemini lagi bermasalah.\n\nDetail: ${errorMessage}` 
-      });
+      // Jika Google sibuk, berikan pesan fallback yang ramah (bukan teks error mentah yang bikin pusing)
+      if (errorMessage.includes("503") || errorMessage.includes("demand")) {
+        res.json({ reply: "Sorri banget bro, server Google Gemini di jalur gratisan lagi antre parah (High Demand). Coba kirim ulang pesan lu barusan atau tunggu 1 menit lagi ya!" });
+      } else {
+        res.json({ reply: `Halo bro! Gw Agung. Sorri banget Gemini lagi ada kendala.\n\nDetail: ${errorMessage}` });
+      }
     }
   } catch (err: any) {
     console.error('Chat error:', err);
