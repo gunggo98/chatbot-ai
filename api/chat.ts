@@ -11,12 +11,10 @@ function getGeminiClient(): GoogleGenAI | null {
   const key = process.env.GEMINI_API_KEY;
   if (!key || !key.trim()) return null;
 
-  // Inisialisasi standar yang direkomendasikan SDK resmi Google @google/genai
   return new GoogleGenAI({
-    apiKey: key.trim()
+    apiKey: key.trim(),
   });
 }
-
 
 const AGUNG_PERSONALITY_PROMPT = `
 Kamu adalah personifikasi AI dari **Agung**. Kamu menjawab setiap pertanyaan seolah-olah kamu adalah Agung secara langsung.
@@ -41,7 +39,6 @@ Pedoman Menjawab (WAJIB DIIKUTI):
 3. **Format Terstruktur & Rapi**: Berikan jawaban menggunakan format Markdown dengan **bullet points** (- atau *) dan **bold** pada kata kunci penting agar enak dibaca.
 `;
 
-// Endpoint Handler Utama untuk Vercel Serverless
 app.post('/api/chat', async (req: Request, res: Response): Promise<void> => {
   try {
     const { message, history } = req.body;
@@ -54,55 +51,42 @@ app.post('/api/chat', async (req: Request, res: Response): Promise<void> => {
     const ai = getGeminiClient();
 
     if (!ai) {
-      res.status(500).json({ error: 'API Key Gemini belum diset di Vercel!' });
+      res.json({ reply: "Waduh, GEMINI_API_KEY kosong atau belum terbaca di Vercel Environment Variables!" });
       return;
     }
 
-    const formattedHistory = Array.isArray(history)
-      ? history.slice(-8).map((h: { sender: string; text: string }) => ({
-          role: h.sender === 'user' ? 'user' : 'model',
-          parts: [{ text: h.text }],
-        }))
-      : [];
-
-    const modelsToTry = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite'];
     let replyText = '';
-    const errors: string[] = [];
+    let errorMessage = '';
 
-    for (const model of modelsToTry) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents: [
-            ...formattedHistory,
-            { role: 'user', parts: [{ text: message }] },
-          ],
-          config: { systemInstruction: AGUNG_PERSONALITY_PROMPT },
-        });
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.8-flash', // DIUBAH KE MODEL TERBARU 2026 YANG AKTIF
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: `${AGUNG_PERSONALITY_PROMPT}\n\nUser bertanya: ${message}` }],
+          },
+        ],
+      });
 
-        if (response.text && response.text.trim().length > 0) {
-          replyText = response.text.trim();
-          break;
-        }
-        errors.push(`[${model}] respons kosong`);
-      } catch (modelErr: any) {
-        const msg = `[${model}] ${modelErr?.status ?? ''} ${String(modelErr?.message || modelErr).slice(0, 150)}`;
-        errors.push(msg);
-        console.error('[Gemini Engine Error]:', msg);
+      if (response.text && response.text.trim().length > 0) {
+        replyText = response.text.trim();
       }
+    } catch (modelErr: any) {
+      errorMessage = modelErr?.message || String(modelErr);
+      console.error("[Gemini Engine Error]:", errorMessage);
     }
 
     if (replyText) {
       res.json({ reply: replyText });
     } else {
-      // DEBUG SEMENTARA: tampilkan error asli. Hapus bagian "Detail" setelah masalah ketemu.
-      res.json({
-        reply: `Halo bro! Gw Agung. Sorri banget, Gemini lagi bermasalah.\n\nDetail:\n${errors.join('\n')}`,
+      res.json({ 
+        reply: `Halo bro! Gw Agung. Sorri banget, Gemini lagi bermasalah.\n\nDetail: ${errorMessage}` 
       });
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error('Chat error:', err);
-    res.json({ reply: "Waduh bro, backend sistem gw lagi ada kendala runtime nih. Coba tes chat lagi ya!" });
+    res.json({ reply: `Ada kendala internal serverless: ${err?.message || err}` });
   }
 });
 
