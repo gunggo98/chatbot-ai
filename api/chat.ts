@@ -11,15 +11,12 @@ function getGeminiClient(): GoogleGenAI | null {
   const key = process.env.GEMINI_API_KEY;
   if (!key || !key.trim()) return null;
 
+  // Inisialisasi standar yang direkomendasikan SDK resmi Google @google/genai
   return new GoogleGenAI({
-    apiKey: key.trim(),
-    httpOptions: {
-      headers: {
-        'User-Agent': 'aistudio-build',
-      },
-    },
+    apiKey: key.trim()
   });
 }
+
 
 const AGUNG_PERSONALITY_PROMPT = `
 Kamu adalah personifikasi AI dari **Agung**. Kamu menjawab setiap pertanyaan seolah-olah kamu adalah Agung secara langsung.
@@ -71,29 +68,26 @@ app.post('/api/chat', async (req: Request, res: Response): Promise<void> => {
     const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-flash'];
     let replyText = '';
 
-    for (const modelName of modelsToTry) {
-      try {
-        const response = await ai.models.generateContent({
-          model: modelName,
-          contents: [
-            ...formattedHistory,
-            {
-              role: 'user',
-              parts: [{ text: message }],
-            },
-          ],
-          config: {
-            systemInstruction: AGUNG_PERSONALITY_PROMPT,
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash', // Model andalan, super cepat dan kuota stabil
+        contents: [
+          ...formattedHistory,
+          {
+            role: 'user',
+            parts: [{ text: message }],
           },
-        });
+        ],
+        config: {
+          systemInstruction: AGUNG_PERSONALITY_PROMPT,
+        },
+      });
 
-        if (response.text && response.text.trim().length > 0) {
-          replyText = response.text.trim();
-          break;
-        }
-      } catch (modelErr: any) {
-        console.warn(`Model ${modelName} error: ${modelErr?.message || modelErr}`);
+      if (response.text && response.text.trim().length > 0) {
+        replyText = response.text.trim();
       }
+    } catch (modelErr: any) {
+      console.error("[Gemini Engine Error]:", modelErr?.message || modelErr);
     }
 
 
