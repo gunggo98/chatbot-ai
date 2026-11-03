@@ -65,9 +65,9 @@ app.post('/api/chat', async (req: Request, res: Response): Promise<void> => {
         }))
       : [];
 
-    const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
+    const modelsToTry = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite'];
     let replyText = '';
-    let lastError = '';
+    const errors: string[] = [];
 
     for (const model of modelsToTry) {
       try {
@@ -84,10 +84,11 @@ app.post('/api/chat', async (req: Request, res: Response): Promise<void> => {
           replyText = response.text.trim();
           break;
         }
-        lastError = `[${model}] respons kosong`;
+        errors.push(`[${model}] respons kosong`);
       } catch (modelErr: any) {
-        lastError = `[${model}] ${modelErr?.status ?? ''} ${modelErr?.message || modelErr}`;
-        console.error('[Gemini Engine Error]:', lastError);
+        const msg = `[${model}] ${modelErr?.status ?? ''} ${String(modelErr?.message || modelErr).slice(0, 150)}`;
+        errors.push(msg);
+        console.error('[Gemini Engine Error]:', msg);
       }
     }
 
@@ -96,7 +97,7 @@ app.post('/api/chat', async (req: Request, res: Response): Promise<void> => {
     } else {
       // DEBUG SEMENTARA: tampilkan error asli. Hapus bagian "Detail" setelah masalah ketemu.
       res.json({
-        reply: `Halo bro! Gw Agung. Sorri banget, Gemini lagi bermasalah.\n\nDetail: ${lastError.slice(0, 300)}`,
+        reply: `Halo bro! Gw Agung. Sorri banget, Gemini lagi bermasalah.\n\nDetail:\n${errors.join('\n')}`,
       });
     }
   } catch (err) {
